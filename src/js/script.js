@@ -5,7 +5,7 @@ const state = {
     results: [],
     startTime: 0,
     errorsInTrial: 0,
-    rapportNumber: 7,
+    rapportNumber: [1, 7, 9],
     rapportAttempts: 0
 };
 
@@ -35,15 +35,9 @@ function render() {
     container.innerHTML = '';
 
     if (state.stage === 'AUDIO_TEST') {
-        container.innerHTML = `
-            <div class="card">
-                <h2>Rapport - Teste de Áudio</h2>
-                <p>Escute o áudio clicando no botão e digite o número ouvido.</p>
-                <button class="btn-action" onclick="playAudio(${state.rapportNumber}, 'masculina')">Ouvir Áudio</button><br>
-                <input type="number" id="rapport-in" style="padding:15px; font-size:1.5rem; width:80px; text-align:center; border-radius:10px; border:none; margin: 10px 0;"><br>
-                <button class="btn-action" onclick="checkRapport()">Validar</button>
-                <p id="rapport-msg" style="color:var(--error); font-weight:bold;"></p>
-            </div>`;
+        const template = document.getElementById('audio-test-template');
+        const clone = template.content.cloneNode(true);
+        container.appendChild(clone);
     } 
     else if (state.stage.includes('_INSTR')) {
         renderInstructions(container);
@@ -54,8 +48,8 @@ function render() {
         container.innerHTML = `
             <div class="test-icon" id="feedback-icon">🔊</div>
             <div class="key-hints">
-                <div class="key-box" id="key-z"><b>Z</b><span>${isMasc ? 'PAR' : 'MENOR < 5'}</span></div>
-                <div class="key-box" id="key-m"><b>M</b><span>${isMasc ? 'ÍMPAR' : 'MAIOR > 5'}</span></div>
+                <div class="key-box" id="key-a"><b>A</b><span>${isMasc ? 'PAR' : 'MENOR < 5'}</span></div>
+                <div class="key-box" id="key-l"><b>L</b><span>${isMasc ? 'ÍMPAR' : 'MAIOR > 5'}</span></div>
             </div>`;
         playAudio(trial.num, trial.voice);
     } 
@@ -65,43 +59,53 @@ function render() {
 }
 
 function renderInstructions(container) {
-    let content = "";
+    let templateId;
     if (state.stage === 'STAGE_1_INSTR') {
-        content = `<h2>Etapa direta (1)</h2>
-            <p>Para a primeira etapa do teste você escutará uma voz MASCULINA falar uma série de números, um de cada vez.</p>
-            <p>Sua tarefa é decidir o mais rápido possível se este número é “PAR” ou “ÍMPAR”.</p>
-            <p>Pressione a tecla <b>Z</b> se o número PAR.<br>Pressione a tecla <b>M</b> se o número ÍMPAR.</p>
-            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
-            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>`;
+        templateId = 'stage1-instr-template';
     } else if (state.stage === 'STAGE_2_INSTR') {
-        content = `<h2>Etapa direta (2)</h2>
-            <p>Para a próxima etapa do teste você escutará uma voz FEMININA falar uma série de números, um de cada vez.</p>
-            <p>Sua tarefa é decidir o mais rápido possível se este número é “MENOR QUE 5” ou “MAIOR QUE 5”.</p>
-            <p>Pressione a tecla <b>Z</b> se o número “MENOR QUE 5”.<br>Pressione a tecla <b>M</b> se o número “MAIOR QUE 5”.</p>
-            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
-            <p><i>Ao iniciar: Posicione seu indicador esquerdo sobre a tecla Z e o direito sobre a tecla M.</i></p>
-            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>`;
+        templateId = 'stage2-instr-template';
     } else if (state.stage === 'STAGE_3_INSTR') {
-        content = `<h2>Etapa alternada</h2>
-            <p>Agora vamos combinar as duas tarefas em uma:</p>
-            <p>Novamente, você escutará uma série de números, um de cada vez.</p>
-            <p><b>Se a voz for MASCULINA:</b> Classifique o número entre PAR ou ÍMPAR.<br>
-            <b>Se a voz for FEMININA:</b> Classifique o número entre MENOR ou MAIOR que 5.</p>
-            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
-            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>`;
+        templateId = 'stage3-instr-template';
     }
-    container.innerHTML = `<div class="card">${content}</div>`;
+    const template = document.getElementById(templateId);
+    container.innerHTML = template.innerHTML;
 }
 
-function playAudio(num, voice) {
-    const audio = new Audio(`src/audio/${voice}/${num}.mp3`);
-    audio.onended = () => { state.startTime = performance.now(); };
-    audio.play();
+function playAudio(nums, voice) {
+    if (!Array.isArray(nums)) nums = [nums];
+    let index = 0;
+    const playNext = () => {
+        if (index < nums.length) {
+            const audio = new Audio(`src/audio/${voice}/${nums[index]}.mp3`);
+            const proceed = () => {
+                index++;
+                if (index < nums.length) {
+                    setTimeout(playNext, 500);
+                } else {
+                    state.startTime = performance.now();
+                }
+            };
+            audio.onended = proceed;
+            audio.onerror = () => {
+                console.warn(`Áudio não encontrado: ${voice}/${nums[index]}.mp3. Avançando...`);
+                proceed();
+            };
+            audio.play().catch(err => {
+                console.warn(`Erro ao tentar tocar ${voice}/${nums[index]}.mp3:`, err);
+                proceed();
+            });
+        }
+    };
+    playNext();
+}
+
+function playRapportAudio() {
+    playAudio(state.rapportNumber, 'masculina');
 }
 
 function checkRapport() {
-    const val = document.getElementById('rapport-in').value;
-    if (parseInt(val) === state.rapportNumber) {
+    const val = document.getElementById('rapport-in').value.trim().replace(/\s+/g, '');
+    if (val === '179') {
         state.stage = 'STAGE_1_INSTR'; render();
     } else {
         state.rapportAttempts++;
@@ -120,7 +124,7 @@ window.addEventListener('keydown', (e) => {
     }
 
     if (!state.stage.startsWith('STAGE_') || state.stage.includes('_INSTR')) return;
-    if (key !== 'z' && key !== 'm') return;
+    if (key !== 'a' && key !== 'l') return;
 
     const btn = document.getElementById(`key-${key}`);
     const trial = state.trials[state.currentTrial];
@@ -155,8 +159,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 function validate(trial, key) {
-    if (trial.voice === 'masculina') return (trial.num % 2 === 0 && key === 'z') || (trial.num % 2 !== 0 && key === 'm');
-    return (trial.num < 5 && key === 'z') || (trial.num > 5 && key === 'm');
+    if (trial.voice === 'masculina') return (trial.num % 2 === 0 && key === 'a') || (trial.num % 2 !== 0 && key === 'l');
+    return (trial.num < 5 && key === 'a') || (trial.num > 5 && key === 'l');
 }
 
 function advance() {
@@ -182,7 +186,7 @@ function renderResults(container) {
     const ER = errs(switchTrials), EnR = errs(nonSwitch);
 
     container.innerHTML = `
-        <div class="card" style="text-align:left;">
+        <div class="card results-card">
             <h2 style="text-align:center">Resultados da Avaliação</h2>
             <table class="results-table">
                 <tr><th>Métrica</th><th>Valor</th></tr>
@@ -196,7 +200,7 @@ function renderResults(container) {
                 <tr><td><b>Custo de Troca (CTT)</b></td><td><b>${(TR - TnR).toFixed(2)} ms</b></td></tr>
                 <tr><td>Custo de Troca Erros (CTE)</td><td>${ER - EnR}</td></tr>
             </table>
-            <button class="btn-action" style="width:100%; margin-top:20px;" onclick="location.reload()">Reiniciar</button>
+            <button class="btn-action btn-restart" onclick="location.reload()">Reiniciar</button>
         </div>`;
 }
 

@@ -10,6 +10,48 @@
     <div id="app">
         <div id="screen-container"></div>
     </div>
+    <template id="audio-test-template">
+        <div class="card">
+            <h2>Teste de Áudio</h2>
+            <p>Escute os áudios clicando no botão e digite os números ditos separados por espaço</p>
+            <button class="btn-action" onclick="playRapportAudio()">Ouvir Áudio</button><br>
+            <input type="text" id="rapport-in" class="rapport-input" placeholder="Digite aqui"><br>
+            <button class="btn-action" onclick="checkRapport()">Validar</button>
+            <p id="rapport-msg" style="color:var(--error); font-weight:bold;"></p>
+        </div>
+    </template>
+    <template id="stage1-instr-template">
+        <div class="card">
+            <h2>Etapa direta</h2>
+            <p>Para a primeira etapa do teste você escutará uma voz MASCULINA falar uma série de números, um de cada vez.</p>
+            <p>Sua tarefa é decidir o mais rápido possível se este número é "PAR" ou "ÍMPAR".</p>
+            <p>Pressione a tecla <b>A</b> se o número PAR.<br>Pressione a tecla <b>L</b> se o número ÍMPAR.</p>
+            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
+            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>
+        </div>
+    </template>
+    <template id="stage2-instr-template">
+        <div class="card">
+            <h2>Etapa direta</h2>
+            <p>Para a próxima etapa do teste você escutará uma voz FEMININA falar uma série de números, um de cada vez.</p>
+            <p>Sua tarefa é decidir o mais rápido possível se este número é "MENOR QUE 5" ou "MAIOR QUE 5".</p>
+            <p>Pressione a tecla <b>A</b> se o número "MENOR QUE 5".<br>Pressione a tecla <b>L</b> se o número "MAIOR QUE 5".</p>
+            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
+            <p><i>Ao iniciar: Posicione seu indicador esquerdo sobre a tecla A e o direito sobre a tecla L.</i></p>
+            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>
+        </div>
+    </template>
+    <template id="stage3-instr-template">
+        <div class="card">
+            <h2>Etapa alternada</h2>
+            <p>Agora vamos combinar as duas tarefas em uma:</p>
+            <p>Novamente, você escutará uma série de números, um de cada vez.</p>
+            <p><b>Se a voz for MASCULINA:</b> Classifique o número entre PAR ou ÍMPAR.<br>
+            <b>Se a voz for FEMININA:</b> Classifique o número entre MENOR ou MAIOR que 5.</p>
+            <p>Responda da forma mais rápida e precisa que conseguir. Se você errar, um sinal sonoro irá soar. Simplesmente corrija a sua resposta e continue.</p>
+            <p><b>Quando estiver preparado pressione ESPAÇO para iniciar.</b></p>
+        </div>
+    </template>
     <audio id="audio-error" src="src/audio/error.mp3"></audio>
     <script src="src/js/script.js"></script>
 </body>
