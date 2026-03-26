@@ -48,9 +48,9 @@ body {
 .key-hints { display: flex; justify-content: center; gap: 30px; margin-top: 50px; }
 
 .key-box {
-    width: 150px; height: 150px; border: 3px solid #333; border-radius: 20px;
+    width: 150px; height: 150px; border: 3px solid var(--border-color); border-radius: 20px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); background: #0a0a0a;
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); background: var(--bg-secondary);
 }
 
 .key-box b { font-size: 3.5rem; margin: 0; }
@@ -70,7 +70,7 @@ body {
 }
 
 .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
-.results-table td, .results-table th { border: 1px solid #333; padding: 10px; text-align: left; }
+.results-table td, .results-table th { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
 
 .rapport-input {
     padding: 15px;
