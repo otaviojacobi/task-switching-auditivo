@@ -6,7 +6,8 @@ const state = {
     startTime: 0,
     errorsInTrial: 0,
     rapportNumber: [1, 7, 9],
-    rapportAttempts: 0
+    rapportAttempts: 0,
+    pendingStage: null
 };
 
 const DEMO_TRIALS = {
@@ -39,17 +40,16 @@ function render() {
         const clone = template.content.cloneNode(true);
         container.appendChild(clone);
     } 
-    else if (state.stage.includes('_INSTR')) {
+    else if (state.stage.includes('_INSTR') || state.stage === 'POSITIONING') {
         renderInstructions(container);
     }
     else if (state.stage.startsWith('STAGE_')) {
         const trial = state.trials[state.currentTrial];
-        const isMasc = trial.voice === 'masculina';
         container.innerHTML = `
             <div class="test-icon" id="feedback-icon">🔊</div>
             <div class="key-hints">
-                <div class="key-box" id="key-a"><b>A</b><span>${isMasc ? 'PAR' : 'MENOR < 5'}</span></div>
-                <div class="key-box" id="key-l"><b>L</b><span>${isMasc ? 'ÍMPAR' : 'MAIOR > 5'}</span></div>
+                <div class="key-box" id="key-a"><b>A</b><span>PAR<br>ou &lt; 5</span></div>
+                <div class="key-box" id="key-l"><b>L</b><span>ÍMPAR<br>ou &gt; 5</span></div>
             </div>`;
         playAudio(trial.num, trial.voice);
     } 
@@ -60,13 +60,10 @@ function render() {
 
 function renderInstructions(container) {
     let templateId;
-    if (state.stage === 'STAGE_1_INSTR') {
-        templateId = 'stage1-instr-template';
-    } else if (state.stage === 'STAGE_2_INSTR') {
-        templateId = 'stage2-instr-template';
-    } else if (state.stage === 'STAGE_3_INSTR') {
-        templateId = 'stage3-instr-template';
-    }
+    if (state.stage === 'STAGE_1_INSTR') templateId = 'stage1-instr-template';
+    else if (state.stage === 'STAGE_2_INSTR') templateId = 'stage2-instr-template';
+    else if (state.stage === 'STAGE_3_INSTR') templateId = 'stage3-instr-template';
+    else if (state.stage === 'POSITIONING') templateId = 'positioning-template';
     const template = document.getElementById(templateId);
     container.innerHTML = template.innerHTML;
 }
@@ -116,11 +113,22 @@ function checkRapport() {
 
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
-    
+
+    if (state.stage === 'POSITIONING' && key === ' ') {
+        const next = state.pendingStage;
+        state.stage = next;
+        state.trials = DEMO_TRIALS[next];
+        state.currentTrial = 0;
+        render();
+        return;
+    }
+
     if (state.stage.includes('_INSTR') && key === ' ') {
         const next = state.stage.replace('_INSTR', '');
-        state.stage = next; state.trials = DEMO_TRIALS[next]; state.currentTrial = 0;
-        render(); return;
+        state.pendingStage = next;
+        state.stage = 'POSITIONING';
+        render();
+        return;
     }
 
     if (!state.stage.startsWith('STAGE_') || state.stage.includes('_INSTR')) return;
@@ -130,15 +138,13 @@ window.addEventListener('keydown', (e) => {
     const trial = state.trials[state.currentTrial];
     const isCorrect = validate(trial, key);
 
-    // FEEDBACK VISUAL IMEDIATO (Acende Branco)
     if (btn) btn.classList.add('active-press');
 
     if (isCorrect) {
-        // FEEDBACK ACERTO (Verde)
         btn.classList.add('success');
         const rt = performance.now() - state.startTime;
         state.results.push({ stage: state.stage, rt, numErrors: state.errorsInTrial, isSwitch: trial.isSwitch });
-        
+
         setTimeout(() => {
             btn.classList.remove('active-press', 'success');
             state.errorsInTrial = 0; state.currentTrial++;
@@ -146,7 +152,6 @@ window.addEventListener('keydown', (e) => {
             else advance();
         }, 150);
     } else {
-        // FEEDBACK ERRO (Vermelho)
         state.errorsInTrial++;
         btn.classList.add('fail');
         document.getElementById('feedback-icon').classList.add('shake');
@@ -172,34 +177,39 @@ function advance() {
 
 function renderResults(container) {
     const res = state.results;
-    const d = res.filter(r => r.stage.includes('1') || r.stage.includes('2'));
-    const a = res.filter(r => r.stage.includes('3'));
-    
-    const mean = (arr) => arr.length ? (arr.reduce((s, x) => s + x.rt, 0) / arr.length).toFixed(2) : 0;
-    const errs = (arr) => arr.reduce((s, x) => s + x.numErrors, 0);
+    const d = res.filter(r => r.stage === 'STAGE_1' || r.stage === 'STAGE_2');
+    const a = res.filter(r => r.stage === 'STAGE_3');
+
+    const mean = arr => arr.length ? Math.round(arr.reduce((s, x) => s + x.rt, 0) / arr.length) : 0;
+    const errs = arr => arr.reduce((s, x) => s + x.numErrors, 0);
 
     const RT_D = mean(d), RT_A = mean(a);
     const ED = errs(d), EA = errs(a);
-    
-    const switchTrials = a.filter(r => r.isSwitch), nonSwitch = a.filter(r => !r.isSwitch);
-    const TR = mean(switchTrials), TnR = mean(nonSwitch);
-    const ER = errs(switchTrials), EnR = errs(nonSwitch);
+    const switchT = a.filter(r => r.isSwitch), nonSwitch = a.filter(r => !r.isSwitch);
+    const TR = mean(switchT), TnR = mean(nonSwitch);
+    const ER = errs(switchT), EnR = errs(nonSwitch);
 
     container.innerHTML = `
-        <div class="card results-card">
-            <h2 style="text-align:center">Resultados da Avaliação</h2>
-            <table class="results-table">
-                <tr><th>Métrica</th><th>Valor</th></tr>
-                <tr><td>TR Médio Direto (D)</td><td>${RT_D} ms</td></tr>
-                <tr><td>TR Médio Alternado (A)</td><td>${RT_A} ms</td></tr>
-                <tr><td><b>Custo Total (A - D)</b></td><td><b>${(RT_A - RT_D).toFixed(2)} ms</b></td></tr>
-                <tr><td>Erros (D | A)</td><td>${ED} | ${EA}</td></tr>
-                <tr><th colspan="2">Análise Residual (Etapa Alternada)</th></tr>
-                <tr><td>Tempo Residual (TR)</td><td>${TR} ms</td></tr>
-                <tr><td>Tempo Não-Residual (TnR)</td><td>${TnR} ms</td></tr>
-                <tr><td><b>Custo de Troca (CTT)</b></td><td><b>${(TR - TnR).toFixed(2)} ms</b></td></tr>
-                <tr><td>Custo de Troca Erros (CTE)</td><td>${ER - EnR}</td></tr>
-            </table>
+        <div class="results-card">
+            <h2 style="text-align:center; margin-bottom:1.5rem;">Resultados do Teste</h2>
+            <h3 class="section-label">Performance Geral</h3>
+            <div class="card-group">
+                <div class="metric-card"><h4>RT Médio (Direto)</h4><p>${RT_D} ms</p></div>
+                <div class="metric-card"><h4>Total Erros (Direto)</h4><p>${ED}</p></div>
+                <div class="metric-card"><h4>RT Médio (Alternado)</h4><p>${RT_A} ms</p></div>
+                <div class="metric-card"><h4>Total Erros (Alternado)</h4><p>${EA}</p></div>
+                <div class="metric-card"><h4>Diferença RT (Alt - Dir)</h4><p>${RT_A - RT_D} ms</p></div>
+                <div class="metric-card"><h4>Diferença Erros (Alt - Dir)</h4><p>${EA - ED}</p></div>
+            </div>
+            <h3 class="section-label">Análise de Custo de Troca</h3>
+            <div class="card-group">
+                <div class="metric-card"><h4>RT Troca (TR)</h4><p>${TR} ms</p></div>
+                <div class="metric-card"><h4>RT Não-Troca (TnR)</h4><p>${TnR} ms</p></div>
+                <div class="metric-card"><h4>CTT (TR - TnR)</h4><p>${TR - TnR} ms</p></div>
+                <div class="metric-card"><h4>Erros Troca (ER)</h4><p>${ER}</p></div>
+                <div class="metric-card"><h4>Erros Não-Troca (EnR)</h4><p>${EnR}</p></div>
+                <div class="metric-card"><h4>CTE (ER - EnR)</h4><p>${ER - EnR}</p></div>
+            </div>
             <button class="btn-action btn-restart" onclick="location.reload()">Reiniciar</button>
         </div>`;
 }
